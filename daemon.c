@@ -58,6 +58,12 @@
 
 #define UNFS_NAME "UNFS3 unfsd " PACKAGE_VERSION " (C) 2009, Pascal Schmidt <unfs3-server@ewetel.net>\n"
 
+/* When rpc send buffer is not enough for payload, it will split payload into pieces.
+   Not all rpc client can handle this feature well. So we must make sure the send buffer 
+   is larger enough than expected max size payload.
+*/
+#define RPC_SEND_BUFF (512*1024+16*1024)
+
 /* write verifier */
 writeverf3 wverf;
 
@@ -791,7 +797,7 @@ static SVCXPRT *create_tcp_transport(unsigned int port)
 	}
     }
 
-    transp = svctcp_create(sock, 0, 0);
+    transp = svctcp_create(sock, RPC_SEND_BUFF, 0);
 
     if (transp == NULL) {
 	fprintf(stderr, "%s\n", "cannot create tcp service.");

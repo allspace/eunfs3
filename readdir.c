@@ -213,3 +213,140 @@ READDIR3res read_dir(const char *path, cookie3 cookie, cookieverf3 verf,
 
     return result;
 }
+
+
+READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf,
+		     count3 count)
+{
+    READDIRPLUS3res result;
+    READDIRPLUS3resok resok;
+    cookie3 upper;
+    static entryplus3 entry[MAX_ENTRIES];
+    backend_statstruct buf;
+    int res;
+    backend_dirstream *search;
+    struct dirent *this;
+    count3 i, real_count;
+    static char obj[NFS_MAXPATHLEN * MAX_ENTRIES];
+    char scratch[NFS_MAXPATHLEN];
+
+    /* check upper part of cookie */
+    upper = cookie & 0xFFFFFFFF00000000ULL;
+    if (cookie != 0 && upper != rcookie) {
+      /* ignore cookie if unexpected so we restart from the beginning */
+      cookie = 0;
+    }
+    cookie &= 0xFFFFFFFFULL;
+
+    /* we refuse to return more than 4k from READDIR */
+    if (count > 4096)
+	count = 4096;
+
+    /* account for size of information heading resok structure */
+    real_count = RESOK_SIZE;
+
+    /* We are always returning zero as a cookie verifier. One reason for this 
+       is that stat() on Windows seems to return cached st_mtime values,
+       which gives spurious NFS3ERR_BAD_COOKIEs. Btw, here's what Peter
+       Staubach has to say about cookie verifiers:
+
+       "From my viewpoint, the cookieverifier was a failed experiment in NFS
+       Version 3.  The semantics were never well understood nor supported by
+       many local file systems.  The Solaris NFS server always returns zeros
+       in the cookieverifier field." */
+    memset(verf, 0, NFS3_COOKIEVERFSIZE);
+
+    search = backend_opendir(path);
+    if (!search) {
+	if ((exports_opts & OPT_REMOVABLE) && (export_point(path))) {
+	    /* Removable media export point; probably no media inserted.
+	       Return empty directory. */
+	    memset(resok.cookieverf, 0, NFS3_COOKIEVERFSIZE);
+	    resok.reply.entries = NULL;
+	    resok.reply.eof = TRUE;
+	    result.status = NFS3_OK;
+	    result.READDIRPLUS3res_u.resok = resok;
+	    return result;
+	} else {
+	    result.status = readdir_err();
+	    return result;
+	}
+    }
+
+    this = backend_readdir(search);
+    /* We cannot use telldir()/seekdir(), since the value from telldir() is
+       not valid after closedir(). */
+    for (i = 0; i < cookie; i++)
+	if (this)
+	    this = backend_readdir(search);
+
+    i = 0;
+    entry[0].name = NULL;
+    while (this && real_count < count && i < MAX_ENTRIES) {
+	if (i > 0)
+	    entry[i - 1].nextentry = &entry[i];
+
+	if (strlen(path) + strlen(this->d_name) + 1 < NFS_MAXPATHLEN) {
+
+	    if (strcmp(path, "/") == 0)
+		sprintf(scratch, "/%s", this->d_name);
+	    else
+		sprintf(scratch, "%s/%s", path, this->d_name);
+
+	    res = backend_lstat(scratch, &buf);
+	    if (res == -1) {
+		result.status = readdir_err();
+		backend_closedir(search);
+		return result;
+	    }
+
+	    strcpy(&obj[i * NFS_MAXPATHLEN], this->d_name);
+
+#ifdef WIN32
+	    /* See comment in attr.c:get_post_buf */
+	    entry[i].fileid = (buf.st_ino >> 32) ^ (buf.st_ino & 0xffffffff);
+#else
+	    entry[i].fileid = buf.st_ino;
+#endif
+	    entry[i].name = &obj[i * NFS_MAXPATHLEN];
+	    entry[i].cookie = (cookie + 1 + i) | rcookie;
+	    entry[i].nextentry = NULL;
+
+	    /* account for entry size */
+	    real_count += ENTRY_SIZE + NAME_SIZE(this->d_name);
+
+	    /* whoops, overflowed the maximum size */
+	    if (real_count > count && i > 0)
+		entry[i - 1].nextentry = NULL;
+	    else {
+		/* advance to next entry */
+		this = backend_readdir(search);
+	    }
+
+	    i++;
+	} else {
+	    result.status = NFS3ERR_IO;
+	    backend_closedir(search);
+	    return result;
+	}
+    }
+    backend_closedir(search);
+
+    if (entry[0].name)
+	resok.reply.entries = &entry[0];
+    else
+	resok.reply.entries = NULL;
+
+    if (this)
+	resok.reply.eof = FALSE;
+    else
+	resok.reply.eof = TRUE;
+
+    memcpy(resok.cookieverf, verf, NFS3_COOKIEVERFSIZE);
+
+    result.status = NFS3_OK;
+    result.READDIRPLUS3res_u.resok = resok;
+
+    return result;
+}
+
