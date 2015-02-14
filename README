@@ -1,7 +1,11 @@
 Enhancements include:
 - Better compatibility with wide NFS clients.
-- Pseudo-implementation of READDIRPLUS, make it work with clients which does not really concern "name_attributes" and "name_handle".
-- Disable exports list procedure, so malicious/security audit program will not be able to detect exports of your NFS server.
+- Pseudo-implementation of READDIRPLUS, make it work with client which 
+  does not really concern "name_attributes" and "name_handle".
+- Disable exports list procedure, so malicious/security audit program 
+  will not be able to detect exports of your NFS server.
+
+---------------------------------------------------------------------
 
 UNFS3 (User-Space NFSv3 Server)
 (C) 2003-2009, Pascal Schmidt <unfs3-server@ewetel.net>
