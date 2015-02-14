@@ -37,6 +37,7 @@
 
 #define IS_SECURE(port) ((port) < 1024)
 
+extern int opt_disable_exports;
 /*
  * number of active mounts
  *
@@ -285,5 +286,8 @@ void *mountproc_umntall_3_svc(U(void *argp), struct svc_req *rqstp)
 
 exports *mountproc_export_3_svc(U(void *argp), U(struct svc_req *rqstp))
 {
-    return &exports_nfslist;
+	if(opt_disable_exports==FALSE)	
+		return &exports_nfslist;
+	else
+		return NULL;
 }

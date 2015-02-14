@@ -83,6 +83,7 @@ int opt_brute_force = FALSE;
 int opt_testconfig = FALSE;
 struct in_addr opt_bind_addr;
 int opt_readable_executables = FALSE;
+int opt_disable_exports = FALSE;
 char *opt_pid_file = NULL;
 
 /* Register with portmapper? */
@@ -250,6 +251,7 @@ static void parse_options(int argc, char **argv)
 		printf("\t-u          use unprivileged port for services\n");
 		printf("\t-d          do not detach from terminal\n");
 		printf("\t-e <file>   file to use instead of /etc/exports\n");
+		printf("\t-E          disable exports list procedure\n");
 		printf("\t-i <file>   write daemon pid to given file\n");
 #ifdef WANT_CLUSTER
 		printf("\t-c          enable cluster extensions\n");
@@ -320,6 +322,8 @@ static void parse_options(int argc, char **argv)
 	    case 'i':
 		opt_pid_file = optarg;
 		break;
+		case 'E':
+		opt_disable_exports = TRUE;
 	    case '?':
 		exit(1);
 		break;
