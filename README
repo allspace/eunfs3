@@ -1,5 +1,5 @@
 Enhancements include:
-- Better compatibility with wide NFS clients.
+- Better compatibility with NFS clients, e.g. ESXi Server.
 - Pseudo-implementation of READDIRPLUS, make it work with client which 
   does not really concern "name_attributes" and "name_handle".
 - Disable exports list procedure, so malicious/security audit program 
