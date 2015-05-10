@@ -216,7 +216,7 @@ READDIR3res read_dir(const char *path, cookie3 cookie, cookieverf3 verf,
 
 
 READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf,
-		     count3 count)
+		     count3 dircount, count3  maxcount, struct svc_req * req)
 {
     READDIRPLUS3res result;
     READDIRPLUS3resok resok;
@@ -239,11 +239,20 @@ READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf
     cookie &= 0xFFFFFFFFULL;
 
     /* we refuse to return more than 4k from READDIR */
-    if (count > 4096)
-	count = 4096;
+    if (dircount > 4096)
+	dircount = 4096;
+	if(dircount==0 || maxcount==0)
+	{
+	    memset(resok.cookieverf, 0, NFS3_COOKIEVERFSIZE);
+	    resok.reply.entries = NULL;
+	    resok.reply.eof = TRUE;
+	    result.status = NFS3_OK;
+	    result.READDIRPLUS3res_u.resok = resok;
+	    return result;
+	}
 
     /* account for size of information heading resok structure */
-    real_count = RESOK_SIZE;
+    real_count = RESOK_SIZE;	//size is the same with READDIR3resok
 
     /* We are always returning zero as a cookie verifier. One reason for this 
        is that stat() on Windows seems to return cached st_mtime values,
@@ -282,7 +291,7 @@ READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf
 
     i = 0;
     entry[0].name = NULL;
-    while (this && real_count < count && i < MAX_ENTRIES) {
+    while (this && real_count < dircount && i < MAX_ENTRIES) {
 	if (i > 0)
 	    entry[i - 1].nextentry = &entry[i];
 
@@ -311,12 +320,14 @@ READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf
 	    entry[i].name = &obj[i * NFS_MAXPATHLEN];
 	    entry[i].cookie = (cookie + 1 + i) | rcookie;
 	    entry[i].nextentry = NULL;
+		entry[i].name_handle = invalid_fh;
+		entry[i].name_attributes = get_post_stat(path, req);
 
 	    /* account for entry size */
 	    real_count += ENTRY_SIZE + NAME_SIZE(this->d_name);
 
 	    /* whoops, overflowed the maximum size */
-	    if (real_count > count && i > 0)
+	    if (real_count > dircount && i > 0)
 		entry[i - 1].nextentry = NULL;
 	    else {
 		/* advance to next entry */

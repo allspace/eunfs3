@@ -11,4 +11,7 @@ READDIR3res
 read_dir(const char *path, cookie3 cookie, cookieverf3 verf, count3 count);
 uint32 directory_hash(const char *path);
 
+READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf,
+		     count3 dircount, count3  maxcount, struct svc_req * req);
+			 
 #endif

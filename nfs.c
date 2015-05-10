@@ -924,14 +924,17 @@ READDIRPLUS3res *nfsproc3_readdirplus_3_svc(U(READDIRPLUS3args * argp),
 					    U(struct svc_req * rqstp))
 {
     static READDIRPLUS3res result;
+    char *path;
 
+    PREP(path, argp->dir);
     /* 
      * we don't do READDIRPLUS since it involves filehandle and
      * attribute getting which is impossible to do atomically
      * from user-space
      */
-    result.status = NFS3ERR_NOTSUPP;
-    result.READDIRPLUS3res_u.resfail.dir_attributes.attributes_follow = FALSE;
+    //result.status = NFS3ERR_NOTSUPP;
+    //result.READDIRPLUS3res_u.resfail.dir_attributes.attributes_follow = FALSE;
+	result = read_dir_plus(path, argp->cookie, argp->cookieverf, argp->dircount, argp->maxcount, rqstp);
 
     return &result;
 }
