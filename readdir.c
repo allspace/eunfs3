@@ -20,6 +20,7 @@
 #include "nfs.h"
 #include "mount.h"
 #include "fh.h"
+#include "attr.h"
 #include "readdir.h"
 #include "backend.h"
 #include "Config/exports.h"
@@ -320,7 +321,6 @@ READDIRPLUS3res read_dir_plus(const char *path, cookie3 cookie, cookieverf3 verf
 	    entry[i].name = &obj[i * NFS_MAXPATHLEN];
 	    entry[i].cookie = (cookie + 1 + i) | rcookie;
 	    entry[i].nextentry = NULL;
-		entry[i].name_handle = invalid_fh;
 		entry[i].name_attributes = get_post_stat(path, req);
 
 	    /* account for entry size */

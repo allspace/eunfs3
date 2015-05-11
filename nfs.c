@@ -935,7 +935,8 @@ READDIRPLUS3res *nfsproc3_readdirplus_3_svc(U(READDIRPLUS3args * argp),
     //result.status = NFS3ERR_NOTSUPP;
     //result.READDIRPLUS3res_u.resfail.dir_attributes.attributes_follow = FALSE;
 	result = read_dir_plus(path, argp->cookie, argp->cookieverf, argp->dircount, argp->maxcount, rqstp);
-
+	result.READDIRPLUS3res_u.resok.dir_attributes = get_post_stat(path, rqstp);
+	
     return &result;
 }
 
